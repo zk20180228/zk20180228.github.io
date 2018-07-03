@@ -1,0 +1,137 @@
+　模板设计模式主要来源于生活中有一些事情是有模板可以遵循的。举两个生活中的例子，如泡茶和泡咖啡，看一看。
+
+　　泡茶有以下四个步骤：  1， 烧开水;  2 把茶放到水杯中; 3，倒入开水; 4， 加糖。
+
+　　泡咖啡也同样有以下四个步骤： 1， 烧开水;  2 把咖啡放到水杯中; 3，倒入开水; 4， 加入糖和牛奶。
+
+　　这时，可以清楚地发现，无论是泡茶还是泡咖啡，它们的步骤几乎是相同的：1，开水， 2 放入水杯，3 倒入开水，4 加调味剂。只有具体到泡某种饮料时，它们有些步骤才不同，泡茶肯定是要把茶放到水杯中，而泡咖啡是把咖啡放到水杯中。这时我们就可以把相同的步骤提取出来，生成一个模版，进行共用，而到具体的内容时，它们再有具本的实现。 具体到代码时，模版就可以用抽象类实现，具体的内容可以到它的子类中实现。
+
+　　现在用抽象类把模版代码实现一下, 
+复制代码
+
+// 抽象基类，为所有的子类提供一个模版
+public abstract class Beverage {
+    
+    // 具体的模板方法， 要用final关键字进行修饰，避免子类进行修改
+    public final void prepareBeverageTemplate() {
+        // 1, 烧开水
+        boilWater();
+        
+        // 2, 放到杯中
+        putIntoCup();
+        
+        // 加入开水
+        addHotWater();
+        
+        // 加入调味应有剂
+        addCondiments();
+    }
+
+    private void boilWater() {
+        System.out.println("烧开水");
+    }
+
+    protected abstract void putIntoCup();
+    
+    private void addHotWater() {
+        System.out.println("加水");
+    }
+    protected abstract void addCondiments();
+
+}
+
+复制代码
+
+　　这里可以看到，在模板中，我们实现了两个方法 boilWater 和 addHotWater，因为这两个方法，对于泡任何饮料来说，都是相同的。另外两个方法则是抽象方法，因为只有到具体泡什么饮料时，这两个方法，才能具体实现，在这里我们并不知道泡茶还是咖啡，因而也就无法确定放入哪种饮料。
+
+　　抽象方法的实现要到子类中去， 声明咖啡子类和茶子类实现这两个方法
+复制代码
+
+public class Coffee extends Beverage {
+
+    @Override
+    protected void putIntoCup() {
+        System.out.println("把咖啡放到水杯中");
+    }
+
+    @Override
+    protected void addCondiments() {
+        System.out.println("加入糖和牛奶");
+    }
+}
+
+复制代码
+复制代码
+
+public class Tea extends Beverage {
+
+    @Override
+    protected void putIntoCup() {
+        System.out.println("把咖啡放到水杯中");
+    }
+
+    @Override
+    protected void addCondiments() {
+        System.out.println("加入糖和牛奶");
+    }
+}
+
+复制代码
+
+　　现在建立一个测试类Test 来使用一下模版模式
+复制代码
+
+public class Test {
+
+    public static void main(String[] args) {
+        
+        // 咖啡制作
+        Beverage coffee = new Coffee();
+        coffee.prepareBeverageTemplate();  // 调用模版
+        System.out.println("\n***********************\n");
+        // 茶制作
+        Beverage tea = new Tea();
+        tea.prepareBeverageTemplate(); // 调用模版
+
+} }
+
+复制代码
+
+　　其实第4个步骤 加调味料不是必须的， 因为有些人喝茶或咖啡是不加调料的，那么怎么让我们程序更加通用化或者更加体现个性化需求？那就要提供一个钩子函数，具体到每个场景，使用不同的钩子函数。这时我们要把 addCondiments 方法放到一个if 函数进行调用, 而if 条件就是我们的钩子函数的调用。
+
+　　prepareBeverageTemplate 方法中的代码修改如下
+
+if (isCustomered()) {
+    // 加入调味应有剂
+    addCondiments();
+}
+        
+
+　　新增 isCustomered 方法
+
+    // 钩子函数，是否需要定置
+    protected boolean isCustomered() {
+        
+        return true;
+    }
+
+　　这时只要在子类中override这个钩子函数，就可以实现个性化需求，比如在茶中，复写这个方法
+复制代码
+
+public class Tea extends Beverage {
+
+    @Override
+    protected void putIntoCup() {
+        System.out.println("把咖啡放到水杯中");
+    }
+
+    @Override
+    protected void addCondiments() {
+        System.out.println("加入糖和牛奶");
+    }
+    
+    @Override
+    protected boolean isCustomered() {
+        return false;
+    }
+}
