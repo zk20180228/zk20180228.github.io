@@ -1,0 +1,32 @@
+public class Demo16 {
+
+    public static void main(String[] args) {
+
+       final Circle circle = new Circle(4.0);
+        change(circle);//并没有影响circle变量指向的对象
+        System.out.println(circle.r);//所以打印结果是4
+
+        String str="helloWord";
+        change(str,"i love you !");//不影响本方法内的str
+        System.out.println(str);//所以打印结果是helloWord！
+
+    }
+
+    public static void change(Circle c){//c也属于一个局部变量
+        c = new Circle(5.0);//c重新指向一个新的引用
+    }
+
+    public static void change(String str,String target){//src是一个局部变量，target是一个局部声明的变量
+
+        str=target;//src重新指向了一个引用
+    }
+
+}
+
+总结：基本数据类型，我们一般称为值传递，引用类型我们一般成为引用传递。但是归根结底，在另一个方法内，通过形参传递其他方法内的局部变量，通过形参指定新的
+引用，来改变目标变量的值是不行的。因为在另一个方法的形参类，这个变量s也是个局部变量，可以联想如下,把交换方法去掉，是什么原因就一清二楚了。
+        final Circle circle = new Circle(4.0);
+        //change(circle);//并没有影响circle变量指向的对象
+        Circle c;
+        c = new Circle(5.0);//和circle没半毛钱关系
+        System.out.println(circle.r);//所以打印结果是4
