@@ -1,0 +1,345 @@
+一、Comparable接口
+
+1.什么是Comparable接口
+
+此接口强行对实现它的每个类的对象进行整体排序。此排序被称为该类的自然排序 ，类的 compareTo方法被称为它的自然比较方法 。实现此接口的对象列表（和数组）可以通过 Collections.sort（和 Arrays.sort ）进行自动排序。实现此接口的对象可以用作有序映射表中的键或有序集合中的元素，无需指定比较器。 
+
+2.实现什么方法
+
+int compareTo(T o)
+
+比较此对象与指定对象的顺序。如果该对象小于、等于或大于指定对象，则分别返回负整数、零或正整数。
+
+参数： o - 要比较的对象。
+
+返回：负整数、零或正整数，根据此对象是小于、等于还是大于指定对象。
+
+抛出：ClassCastException - 如果指定对象的类型不允许它与此对象进行比较。
+
+3.实例
+复制代码
+
+package com.mxl.algorithlm;
+
+import java.util.Date;
+/**
+ * 因为要实现对ConsumInfo对象的排序，所以在ConsunInfo类中要实现Comparable接口，也就是要实现compareTo()方法
+ * 具体的比较参照：依次按照price、uid进行倒序排序
+ * @author breeze
+ *
+ */
+public class ConsumInfo implements Comparable<ConsumInfo> {
+    private int uid;
+    private String name;
+    private double price;
+    private Date datetime;
+    
+    public ConsumInfo() {
+        // TODO Auto-generated constructor stub
+    }
+    
+    public ConsumInfo(int uid,String name,double price,Date datetime){
+        this.uid = uid;
+        this.name = name;
+        this.price = price;
+        this.datetime = datetime;
+                
+    }
+    
+    public int getUid() {
+        return uid;
+    }
+
+    public void setUid(int uid) {
+        this.uid = uid;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public double getPrice() {
+        return price;
+    }
+
+    public void setPrice(double price) {
+        this.price = price;
+    }
+
+    public Date getDatetime() {
+        return datetime;
+    }
+
+    public void setDatetime(Date datetime) {
+        this.datetime = datetime;
+    }
+    
+
+    @Override
+    public String toString() {
+        return "ConsumInfo [uid=" + uid + ", name=" + name + ", price=" + price
+                + ", datetime=" + datetime + "]";
+    }
+    /**
+     * 这里比较的是什么, Collections.sort方法实现的就是按照此比较的东西排列
+     * 顺序（从小到大）：
+     * if(price < o.price){
+            return -1;
+        }
+        if(price > o.price){
+            return 1;
+        }
+     * 倒序（从大到小）：
+     * if(price < o.price){
+            return 1;
+        }
+        if(price > o.price){
+            return -1;
+        }
+     * 
+     */
+    @Override
+    public int compareTo(ConsumInfo o) {
+        //首先比较price，如果price相同，则比较uid
+        if(price < o.price){
+            return -1;
+        }
+        if(price > o.price){
+            return 1;
+        }
+        
+        if(price == o.price){
+            if(uid < o.uid){
+                return -1;
+            }
+            if(uid > o.uid){
+                return 1;
+            }
+        }
+        return 0;
+    }
+    
+    
+}
+
+//测试类
+
+package com.mxl.algorithlm;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+
+public class ConsumInfoTest {
+    
+    public static void main(String[] args) {
+        
+        ConsumInfo consumInfo1 = new ConsumInfo(100, "consumInfo1", 400.0,new Date());
+        ConsumInfo consumInfo2 = new ConsumInfo(200, "consumInfo1", 200.0,new Date());
+        ConsumInfo consumInfo3 = new ConsumInfo(300, "consumInfo1", 100.0,new Date());
+        ConsumInfo consumInfo4 = new ConsumInfo(400, "consumInfo1", 700.0,new Date());
+        ConsumInfo consumInfo5 = new ConsumInfo(500, "consumInfo1", 800.0,new Date());
+        ConsumInfo consumInfo6 = new ConsumInfo(600, "consumInfo1", 300.0,new Date());
+        ConsumInfo consumInfo7 = new ConsumInfo(700, "consumInfo1", 900.0,new Date());
+        ConsumInfo consumInfo8 = new ConsumInfo(800, "consumInfo1", 400.0,new Date());
+        
+        List<ConsumInfo> list = new ArrayList<ConsumInfo>();
+        list.add(consumInfo1);
+        list.add(consumInfo2);
+        list.add(consumInfo3);
+        list.add(consumInfo4);
+        list.add(consumInfo5);
+        list.add(consumInfo6);
+        list.add(consumInfo7);
+        list.add(consumInfo8);
+        System.out.println("排序前：");
+        //排序前
+        for(ConsumInfo consumInfo : list ){
+            System.out.println(consumInfo);
+        }
+        
+        Collections.sort(list);//排序
+        System.out.println("排序后：");
+        //排序后
+        for(ConsumInfo consumInfo :list){
+            System.out.println(consumInfo);
+        }
+    }
+}
+
+复制代码
+
+二、Comparator接口
+
+与上面的Comparable接口不同的是：
+
+①、Comparator位于包java.util下，而Comparable位于包java.lang下。
+
+②、Comparable接口将比较代码嵌入需要进行比较的类的自身代码中，而Comparator接口在一个独立的类中实现比较。
+
+③、如果前期类的设计没有考虑到类的Compare问题而没有实现Comparable接口，后期可以通过Comparator接口来实现比较算法进行排序，并且为了使用不同的排序标准做准备，比如：升序、降序。
+
+④、Comparable接口强制进行自然排序，而Comparator接口不强制进行自然排序，可以指定排序顺序。
+
+使用实例：
+复制代码
+
+package test;
+
+import java.util.Comparator;
+/**
+ * 具体的比较类（比较器），实现Comparator接口
+ * @author breeze
+ *
+ */
+public class ComparatorConsunInfo implements Comparator<ConsumInfo> {
+    /**
+     * 顺序（从小到大）：
+     * if(price < o.price){
+            return -1;
+        }
+        if(price > o.price){
+            return 1;
+        }
+     * 倒序（从大到小）：
+     * if(price < o.price){
+            return 1;
+        }
+        if(price > o.price){
+            return -1;
+        }
+     */
+    @Override
+    public int compare(ConsumInfo o1, ConsumInfo o2) {
+         //首先比较price，如果price相同，则比较uid
+        if(o1.getPrice() > o2.getPrice()){
+            return 1;
+        }
+        
+        if(o1.getPrice() < o2.getPrice()){
+            return -1;
+        }
+        
+        if(o1.getPrice() == o2.getPrice()){
+            if(o1.getUid() > o2.getUid()){
+                return 1;
+            }
+            if(o1.getUid() < o2.getUid()){
+                return -1;
+            }
+        }
+        return 0;
+    }
+
+}
+
+
+/**
+ * 需要进行比较的类
+ * @author breeze
+ *
+ */
+public class ConsumInfo{
+    private int uid;
+    private String name;
+    private double price;
+    private Date datetime;
+    
+    public ConsumInfo() {
+        // TODO Auto-generated constructor stub
+    }
+    
+    public ConsumInfo(int uid,String name,double price,Date datetime){
+        this.uid = uid;
+        this.name = name;
+        this.price = price;
+        this.datetime = datetime;
+                
+    }
+    
+    public int getUid() {
+        return uid;
+    }
+
+    public void setUid(int uid) {
+        this.uid = uid;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public double getPrice() {
+        return price;
+    }
+
+    public void setPrice(double price) {
+        this.price = price;
+    }
+
+    public Date getDatetime() {
+        return datetime;
+    }
+
+    public void setDatetime(Date datetime) {
+        this.datetime = datetime;
+    }
+
+    @Override
+    public String toString() {
+        return "ConsumInfo [uid=" + uid + ", name=" + name + ", price=" + price
+                + ", datetime=" + datetime + "]";
+    }
+    
+}
+
+
+//测试类
+public class ConsumInfoTest {
+    
+    public static void main(String[] args) {
+        
+        ConsumInfo consumInfo1 = new ConsumInfo(100, "consumInfo1", 400.0,new Date());
+        ConsumInfo consumInfo2 = new ConsumInfo(200, "consumInfo1", 200.0,new Date());
+        ConsumInfo consumInfo3 = new ConsumInfo(300, "consumInfo1", 100.0,new Date());
+        ConsumInfo consumInfo4 = new ConsumInfo(400, "consumInfo1", 700.0,new Date());
+        ConsumInfo consumInfo5 = new ConsumInfo(500, "consumInfo1", 800.0,new Date());
+        ConsumInfo consumInfo6 = new ConsumInfo(600, "consumInfo1", 300.0,new Date());
+        ConsumInfo consumInfo7 = new ConsumInfo(700, "consumInfo1", 900.0,new Date());
+        ConsumInfo consumInfo8 = new ConsumInfo(800, "consumInfo1", 400.0,new Date());
+        
+        List<ConsumInfo> list = new ArrayList<ConsumInfo>();
+        list.add(consumInfo1);
+        list.add(consumInfo2);
+        list.add(consumInfo3);
+        list.add(consumInfo4);
+        list.add(consumInfo5);
+        list.add(consumInfo6);
+        list.add(consumInfo7);
+        list.add(consumInfo8);
+        
+        System.out.println("排序前：");
+        //排序前
+        for(ConsumInfo consumInfo : list ){
+            System.out.println(consumInfo);
+        }
+        ComparatorConsunInfo comparatorConsunInfo = new ComparatorConsunInfo();//比较器
+        Collections.sort(list,comparatorConsunInfo);//排序
+        System.out.println("排序后：");
+        //排序后
+        for(ConsumInfo consumInfo :list){
+            System.out.println(consumInfo);
+        }
+    }
+}
+
+复制代码
