@@ -1,0 +1,361 @@
+一.一个典型的Java线程安全例子
+复制代码
+
+ 1 public class ThreadTest {
+ 2 
+ 3     public static void main(String[] args) {
+ 4         Account account = new Account("123456", 1000);
+ 5         DrawMoneyRunnable drawMoneyRunnable = new DrawMoneyRunnable(account, 700);
+ 6         Thread myThread1 = new Thread(drawMoneyRunnable);
+ 7         Thread myThread2 = new Thread(drawMoneyRunnable);
+ 8         myThread1.start();
+ 9         myThread2.start();
+10     }
+11 
+12 }
+13 
+14 class DrawMoneyRunnable implements Runnable {
+15 
+16     private Account account;
+17     private double drawAmount;
+18 
+19     public DrawMoneyRunnable(Account account, double drawAmount) {
+20         super();
+21         this.account = account;
+22         this.drawAmount = drawAmount;
+23     }
+24 
+25     public void run() {
+26         if (account.getBalance() >= drawAmount) {  //1
+27             System.out.println("取钱成功， 取出钱数为：" + drawAmount);
+28             double balance = account.getBalance() - drawAmount;
+29             account.setBalance(balance);
+30             System.out.println("余额为：" + balance);
+31         }
+32     }
+33 }
+34 
+35 class Account {
+36 
+37     private String accountNo;
+38     private double balance;
+39 
+40     public Account() {
+41 
+42     }
+43 
+44     public Account(String accountNo, double balance) {
+45         this.accountNo = accountNo;
+46         this.balance = balance;
+47     }
+48 
+49     public String getAccountNo() {
+50         return accountNo;
+51     }
+52 
+53     public void setAccountNo(String accountNo) {
+54         this.accountNo = accountNo;
+55     }
+56 
+57     public double getBalance() {
+58         return balance;
+59     }
+60 
+61     public void setBalance(double balance) {
+62         this.balance = balance;
+63     }
+64 
+65 }
+
+复制代码
+
+上面例子很容易理解，有一张银行卡，里面有1000的余额，程序模拟你和你老婆同时在取款机进行取钱操作的场景。多次运行此程序，可能具有多个不同组合的输出结果。其中一种可能的输出为：
+
+1 取钱成功， 取出钱数为：700.0
+2 余额为：300.0
+3 取钱成功， 取出钱数为：700.0
+4 余额为：-400.0
+
+也就是说，对于一张只有1000余额的银行卡，你们一共可以取出1400，这显然是有问题的。
+
+经过分析，问题在于Java多线程环境下的执行的不确定性。CPU可能随机的在多个处于就绪状态中的线程中进行切换，因此，很有可能出现如下情况：当thread1执行到//1处代码时，判断条件为true，此时CPU切换到thread2，执行//1处代码，发现依然为真，然后执行完thread2，接着切换到thread1，接着执行完毕。此时，就会出现上述结果。
+
+因此，讲到线程安全问题，其实是指多线程环境下对共享资源的访问可能会引起此共享资源的不一致性。因此，为避免线程安全问题，应该避免多线程环境下对此共享资源的并发访问。
+
+ 
+
+二.同步方法
+
+对共享资源进行访问的方法定义中加上synchronized关键字修饰，使得此方法称为同步方法。可以简单理解成对此方法进行了加锁，其锁对象为当前方法所在的对象自身。多线程环境下，当执行此方法时，首先都要获得此同步锁（且同时最多只有一个线程能够获得），只有当线程执行完此同步方法后，才会释放锁对象，其他的线程才有可能获取此同步锁，以此类推...
+
+在上例中，共享资源为account对象，当使用同步方法时，可以解决线程安全问题。只需在run()方法前加上synshronized关键字即可。
+
+1 public synchronized void run() {
+2        
+3     // ....
+4  
+5 }
+
+ 
+
+三.同步代码块
+
+正如上面所分析的那样，解决线程安全问题其实只需限制对共享资源访问的不确定性即可。使用同步方法时，使得整个方法体都成为了同步执行状态，会使得可能出现同步范围过大的情况，于是，针对需要同步的代码可以直接另一种同步方式——同步代码块来解决。
+
+同步代码块的格式为：
+
+1 synchronized (obj) {
+2             
+3     //...
+4 
+5 }
+
+其中，obj为锁对象，因此，选择哪一个对象作为锁是至关重要的。一般情况下，都是选择此共享资源对象作为锁对象。
+
+如上例中，最好选用account对象作为锁对象。（当然，选用this也是可以的，那是因为创建线程使用了runnable方式，如果是直接继承Thread方式创建的线程，使用this对象作为同步锁会其实没有起到任何作用，因为是不同的对象了。因此，选择同步锁时需要格外小心...）
+
+ 
+
+四.Lock对象同步锁
+
+上面我们可以看出，正因为对同步锁对象的选择需要如此小心，有没有什么简单点的解决方案呢？以方便同步锁对象与共享资源解耦，同时又能很好的解决线程安全问题。
+
+使用Lock对象同步锁可以方便的解决此问题，唯一需要注意的一点是Lock对象需要与资源对象同样具有一对一的关系。Lock对象同步锁一般格式为：
+复制代码
+
+ 1 class X {
+ 2     
+ 3     // 显示定义Lock同步锁对象，此对象与共享资源具有一对一关系
+ 4     private final Lock lock = new ReentrantLock();
+ 5     
+ 6     public void m(){
+ 7         // 加锁
+ 8         lock.lock();
+ 9         
+10         //...  需要进行线程安全同步的代码
+11         
+12         // 释放Lock锁
+13         lock.unlock();
+14     }
+15     
+16 }
+
+复制代码
+
+ 
+
+ 五.wait()/notify()/notifyAll()线程通信
+
+在博文《Java总结篇系列：java.lang.Object》中有提及到这三个方法，虽然这三个方法主要都是用于多线程中，但实际上都是Object类中的本地方法。因此，理论上，任何Object对象都可以作为这三个方法的主调，在实际的多线程编程中，只有同步锁对象调这三个方法，才能完成对多线程间的线程通信。
+
+wait()：导致当前线程等待并使其进入到等待阻塞状态。直到其他线程调用该同步锁对象的notify()或notifyAll()方法来唤醒此线程。
+
+notify()：唤醒在此同步锁对象上等待的单个线程，如果有多个线程都在此同步锁对象上等待，则会任意选择其中某个线程进行唤醒操作，只有当前线程放弃对同步锁对象的锁定，才可能执行被唤醒的线程。
+
+notifyAll()：唤醒在此同步锁对象上等待的所有线程，只有当前线程放弃对同步锁对象的锁定，才可能执行被唤醒的线程。
+复制代码
+
+  1 package com.qqyumidi;
+  2 
+  3 public class ThreadTest {
+  4 
+  5     public static void main(String[] args) {
+  6         Account account = new Account("123456", 0);
+  7 
+  8         Thread drawMoneyThread = new DrawMoneyThread("取钱线程", account, 700);
+  9         Thread depositeMoneyThread = new DepositeMoneyThread("存钱线程", account, 700);
+ 10 
+ 11         drawMoneyThread.start();
+ 12         depositeMoneyThread.start();
+ 13     }
+ 14 
+ 15 }
+ 16 
+ 17 class DrawMoneyThread extends Thread {
+ 18 
+ 19     private Account account;
+ 20     private double amount;
+ 21 
+ 22     public DrawMoneyThread(String threadName, Account account, double amount) {
+ 23         super(threadName);
+ 24         this.account = account;
+ 25         this.amount = amount;
+ 26     }
+ 27 
+ 28     public void run() {
+ 29         for (int i = 0; i < 100; i++) {
+ 30             account.draw(amount, i);
+ 31         }
+ 32     }
+ 33 }
+ 34 
+ 35 class DepositeMoneyThread extends Thread {
+ 36 
+ 37     private Account account;
+ 38     private double amount;
+ 39 
+ 40     public DepositeMoneyThread(String threadName, Account account, double amount) {
+ 41         super(threadName);
+ 42         this.account = account;
+ 43         this.amount = amount;
+ 44     }
+ 45 
+ 46     public void run() {
+ 47         for (int i = 0; i < 100; i++) {
+ 48             account.deposite(amount, i);
+ 49         }
+ 50     }
+ 51 }
+ 52 
+ 53 class Account {
+ 54 
+ 55     private String accountNo;
+ 56     private double balance;
+ 57     // 标识账户中是否已有存款
+ 58     private boolean flag = false;
+ 59 
+ 60     public Account() {
+ 61 
+ 62     }
+ 63 
+ 64     public Account(String accountNo, double balance) {
+ 65         this.accountNo = accountNo;
+ 66         this.balance = balance;
+ 67     }
+ 68 
+ 69     public String getAccountNo() {
+ 70         return accountNo;
+ 71     }
+ 72 
+ 73     public void setAccountNo(String accountNo) {
+ 74         this.accountNo = accountNo;
+ 75     }
+ 76 
+ 77     public double getBalance() {
+ 78         return balance;
+ 79     }
+ 80 
+ 81     public void setBalance(double balance) {
+ 82         this.balance = balance;
+ 83     }
+ 84 
+ 85     /**
+ 86      * 存钱
+ 87      * 
+ 88      * @param depositeAmount
+ 89      */
+ 90     public synchronized void deposite(double depositeAmount, int i) {
+ 91 
+ 92         if (flag) {
+ 93             // 账户中已有人存钱进去，此时当前线程需要等待阻塞
+ 94             try {
+ 95                 System.out.println(Thread.currentThread().getName() + " 开始要执行wait操作" + " -- i=" + i);
+ 96                 wait();
+ 97                 // 1
+ 98                 System.out.println(Thread.currentThread().getName() + " 执行了wait操作" + " -- i=" + i);
+ 99             } catch (InterruptedException e) {
+100                 e.printStackTrace();
+101             }
+102         } else {
+103             // 开始存钱
+104             System.out.println(Thread.currentThread().getName() + " 存款:" + depositeAmount + " -- i=" + i);
+105             setBalance(balance + depositeAmount);
+106             flag = true;
+107 
+108             // 唤醒其他线程
+109             notifyAll();
+110 
+111             // 2
+112             try {
+113                 Thread.sleep(3000);
+114             } catch (InterruptedException e) {
+115                 e.printStackTrace();
+116             }
+117             System.out.println(Thread.currentThread().getName() + "-- 存钱 -- 执行完毕" + " -- i=" + i);
+118         }
+119     }
+120 
+121     /**
+122      * 取钱
+123      * 
+124      * @param drawAmount
+125      */
+126     public synchronized void draw(double drawAmount, int i) {
+127         if (!flag) {
+128             // 账户中还没人存钱进去，此时当前线程需要等待阻塞
+129             try {
+130                 System.out.println(Thread.currentThread().getName() + " 开始要执行wait操作" + " 执行了wait操作" + " -- i=" + i);
+131                 wait();
+132                 System.out.println(Thread.currentThread().getName() + " 执行了wait操作" + " 执行了wait操作" + " -- i=" + i);
+133             } catch (InterruptedException e) {
+134                 e.printStackTrace();
+135             }
+136         } else {
+137             // 开始取钱
+138             System.out.println(Thread.currentThread().getName() + " 取钱：" + drawAmount + " -- i=" + i);
+139             setBalance(getBalance() - drawAmount);
+140 
+141             flag = false;
+142 
+143             // 唤醒其他线程
+144             notifyAll();
+145 
+146             System.out.println(Thread.currentThread().getName() + "-- 取钱 -- 执行完毕" + " -- i=" + i); // 3
+147         }
+148     }
+149 
+150 }
+
+复制代码
+
+上面的例子演示了wait()/notify()/notifyAll()的用法。部分输出结果为：
+复制代码
+
+ 1 取钱线程 开始要执行wait操作 执行了wait操作 -- i=0
+ 2 存钱线程 存款:700.0 -- i=0
+ 3 存钱线程-- 存钱 -- 执行完毕 -- i=0
+ 4 存钱线程 开始要执行wait操作 -- i=1
+ 5 取钱线程 执行了wait操作 执行了wait操作 -- i=0
+ 6 取钱线程 取钱：700.0 -- i=1
+ 7 取钱线程-- 取钱 -- 执行完毕 -- i=1
+ 8 取钱线程 开始要执行wait操作 执行了wait操作 -- i=2
+ 9 存钱线程 执行了wait操作 -- i=1
+10 存钱线程 存款:700.0 -- i=2
+11 存钱线程-- 存钱 -- 执行完毕 -- i=2
+12 取钱线程 执行了wait操作 执行了wait操作 -- i=2
+13 取钱线程 取钱：700.0 -- i=3
+14 取钱线程-- 取钱 -- 执行完毕 -- i=3
+15 取钱线程 开始要执行wait操作 执行了wait操作 -- i=4
+16 存钱线程 存款:700.0 -- i=3
+17 存钱线程-- 存钱 -- 执行完毕 -- i=3
+18 存钱线程 开始要执行wait操作 -- i=4
+19 取钱线程 执行了wait操作 执行了wait操作 -- i=4
+20 取钱线程 取钱：700.0 -- i=5
+21 取钱线程-- 取钱 -- 执行完毕 -- i=5
+22 取钱线程 开始要执行wait操作 执行了wait操作 -- i=6
+23 存钱线程 执行了wait操作 -- i=4
+24 存钱线程 存款:700.0 -- i=5
+25 存钱线程-- 存钱 -- 执行完毕 -- i=5
+26 存钱线程 开始要执行wait操作 -- i=6
+27 取钱线程 执行了wait操作 执行了wait操作 -- i=6
+28 取钱线程 取钱：700.0 -- i=7
+29 取钱线程-- 取钱 -- 执行完毕 -- i=7
+30 取钱线程 开始要执行wait操作 执行了wait操作 -- i=8
+31 存钱线程 执行了wait操作 -- i=6
+32 存钱线程 存款:700.0 -- i=7
+
+复制代码
+
+由此，我们需要注意如下几点：
+
+1.wait()方法执行后，当前线程立即进入到等待阻塞状态，其后面的代码不会执行；
+
+2.notify()/notifyAll()方法执行后，将唤醒此同步锁对象上的（任意一个-notify()/所有-notifyAll()）线程对象，但是，此时还并没有释放同步锁对象，也就是说，如果notify()/notifyAll()后面还有代码，还会继续进行，知道当前线程执行完毕才会释放同步锁对象；
+
+3.notify()/notifyAll()执行后，如果右面有sleep()方法，则会使当前线程进入到阻塞状态，但是同步对象锁没有释放，依然自己保留，那么一定时候后还是会继续执行此线程，接下来同2；
+
+4.wait()/notify()/nitifyAll()完成线程间的通信或协作都是基于不同对象锁的，因此，如果是不同的同步对象锁将失去意义，同时，同步对象锁最好是与共享资源对象保持一一对应关系；
+
+5.当wait线程唤醒后并执行时，是接着上次执行到的wait()方法代码后面继续往下执行的。
+
+当然，上面的例子相对来说比较简单，只是为了简单示例wait()/notify()/noitifyAll()方法的用法，但其本质上说，已经是一个简单的生产者-消费者模式了。
